@@ -1,2 +1,2 @@
 # PACE-edu-material-NASA-SAC2024
-Interactive educational tool for NASA's PACE mission, featuring satellite orbit visualization and a spectrum-matching game. Built with Flask, Python, HTML, and JavaScript for NASA Space Apps Challenge 2024.
+This project is an interactive educational material developed for NASA's PACE mission, created as part of the NASA Space Apps Challenge 2024. The web application visualizes the PACE satellite’s orbit, scanning areas, and includes a spectrum-matching game to educate users about Earth observation, aerosols, ocean ecosystems, and plankton. It leverages Flask, Python, HTML, and JavaScript to create an engaging, interactive experience aimed at simplifying complex scientific concepts for users.

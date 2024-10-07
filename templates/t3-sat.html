@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PACE Uydu Yörünge ve Tarama Görselleştirmesi</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #000;
+            color: white;
+        }
+
+        .canvas-container {
+            display: flex;
+            /* Canvas'ları yan yana dizmek için flexbox */
+            justify-content: space-around;
+            /* Aralarındaki boşluğu dengelemek için */
+        }
+
+        canvas {
+            border: 2px solid white;
+            background-color: #000;
+            width: 45%;
+            /* Genişliği %45 yaparak yan yana sığmalarını sağlıyoruz */
+            height: auto;
+        }
+
+        .controls {
+            margin: 20px;
+        }
+
+        .clear {
+            clear: both;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="controls">
+        <label for="wavelength">wavelength: <span id="wavelengthValue">0</span></label>
+        <input type="range" id="wavelength" min="0" max="15" value="0">
+        <br>
+        <label for="amplitude">amplitude: <span id="amplitudeValue">10</span></label>
+        <input type="range" id="amplitude" min="10" max="15" value="10">
+    </div>
+
+    <!-- Canvas'lar için yeni bir container div ekledim -->
+    <div class="canvas-container">
+        <canvas id="orbitCanvas"></canvas>
+        <canvas id="waveCanvas"></canvas>
+    </div>
+
+    <div class="clear"></div>
+
+    <script>
+        const orbitCanvas = document.getElementById('orbitCanvas');
+        const orbitCtx = orbitCanvas.getContext('2d');
+        const waveCanvas = document.getElementById('waveCanvas');
+        const waveCtx = waveCanvas.getContext('2d');
+
+        // Boyutları biraz küçültüyoruz (width %45 ayarlandı)
+        orbitCanvas.width = window.innerWidth * 0.45;
+        orbitCanvas.height = window.innerHeight * 0.5;
+
+        waveCanvas.width = window.innerWidth * 0.45;
+        waveCanvas.height = 100;
+
+        const centerX = orbitCanvas.width / 2;
+        const centerY = orbitCanvas.height / 2;
+        const earthRadius = 50;  // Dünya yarıçapı
+        const orbitRadius = 100;  // Uydu yörünge yarıçapı
+        let angle = 0;  // Uydu hareket açısı
+        const satelliteSpeed = 0.01;  // Uydu hızı
+
+        const satelliteImage = new Image();
+        satelliteImage.src = "{{ url_for('static', filename='images/pace.png') }}"; // Uydu resmi yolu
+
+
+        let wavelength = 0;  // Kullanıcının dalga boyu
+        let amplitude = 10;   // Kullanıcının genliği (minimum 10)
+
+        // Hedef dalga boyu ve genlik
+        const targetWavelength = Math.random() * 15; // 0-15 arası rastgele değer
+        const targetAmplitude = 10 + Math.random() * 5;  // 10-15 arası rastgele değer
+
+        function drawEarth() {
+            orbitCtx.beginPath();
+            orbitCtx.arc(centerX, centerY, earthRadius, 0, Math.PI * 2, false);
+            orbitCtx.fillStyle = '#2c3e50';  // Dünya rengi
+            orbitCtx.fill();
+            orbitCtx.closePath();
+        }
+
+        function drawOrbit() {
+            orbitCtx.beginPath();
+            orbitCtx.arc(centerX, centerY, orbitRadius, 0, Math.PI * 2, false);
+            orbitCtx.strokeStyle = '#ecf0f1';  // Yörünge rengi
+            orbitCtx.stroke();
+            orbitCtx.closePath();
+        }
+
+        function drawSatellite() {
+            const satelliteX = centerX + orbitRadius * Math.cos(angle);
+            const satelliteY = centerY + orbitRadius * Math.sin(angle);
+            const rotationAngle = Math.atan2(satelliteY - centerY, satelliteX - centerX) + Math.PI / 2;
+
+            orbitCtx.save();
+            orbitCtx.translate(satelliteX, satelliteY);
+            orbitCtx.rotate(rotationAngle);
+            orbitCtx.drawImage(satelliteImage, -20, -20, 40, 40);  // Uydu boyutları
+            orbitCtx.restore();
+
+            drawScanningArea(satelliteX, satelliteY);
+        }
+
+        function drawScanningArea(satelliteX, satelliteY) {
+            const targetX = centerX + earthRadius * Math.cos(angle);
+            const targetY = centerY + earthRadius * Math.sin(angle);
+
+            orbitCtx.beginPath();
+            orbitCtx.moveTo(satelliteX, satelliteY);
+            orbitCtx.lineTo(targetX - 15, targetY - 15);
+            orbitCtx.lineTo(targetX + 15, targetY + 15);
+            orbitCtx.closePath();
+            orbitCtx.fillStyle = 'rgba(52, 152, 219, 0.3)';  // Tarama alanı rengi
+            orbitCtx.fill();
+        }
+
+        function drawWaves() {
+            waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height); // Temizle
+            const frequency = 0.05; // Dalgaların frekansı
+
+            let waveColor = 'red';  // Başlangıçta kırmızı
+
+            // Kullanıcı dalgası
+            waveCtx.beginPath();
+            for (let x = 0; x < waveCanvas.width; x++) {
+                const y = waveCanvas.height / 2 + Math.sin((x * frequency) + parseFloat(wavelength)) * parseFloat(amplitude);
+                waveCtx.lineTo(x, y);
+            }
+            waveCtx.strokeStyle = waveColor;
+            waveCtx.stroke();
+
+            // Hedef dalgası
+            waveCtx.beginPath();
+            waveCtx.strokeStyle = 'blue';
+            for (let x = 0; x < waveCanvas.width; x++) {
+                const y = waveCanvas.height / 2 + Math.sin((x * frequency) + targetWavelength) * targetAmplitude;
+                waveCtx.lineTo(x, y);
+            }
+            waveCtx.stroke();
+
+            // Eşleşme kontrolü
+            const wavelengthMatch = Math.abs(parseFloat(wavelength) - targetWavelength) < 1;
+            const amplitudeMatch = Math.abs(parseFloat(amplitude) - targetAmplitude) < 1;
+
+            if (wavelengthMatch && amplitudeMatch) {
+                waveColor = 'green'; // Eşleştiğinde yeşil
+            }
+
+            waveCtx.strokeStyle = waveColor;
+            waveCtx.beginPath();
+            for (let x = 0; x < waveCanvas.width; x++) {
+                const y = waveCanvas.height / 2 + Math.sin((x * frequency) + parseFloat(wavelength)) * parseFloat(amplitude);
+                waveCtx.lineTo(x, y);
+            }
+            waveCtx.stroke();
+
+            // Bilgi metinleri
+            waveCtx.fillText(`Wavelength: ${parseFloat(wavelength).toFixed(2)} | Genlik: ${parseFloat(amplitude).toFixed(2)}`, 10, 20);
+            waveCtx.fillText(`Hedef Dalga Boyu: ${targetWavelength.toFixed(2)} | Hedef Genlik: ${targetAmplitude.toFixed(2)}`, 10, 40);
+        }
+
+        function animate() {
+            orbitCtx.clearRect(0, 0, orbitCanvas.width, orbitCanvas.height);  // Temizle
+            drawEarth();  // Dünya
+            drawOrbit();  // Yörünge
+            drawSatellite();  // Uydu ve tarama alanı
+
+            angle += satelliteSpeed;  // Uydu hareketi
+            drawWaves();  // Dalgaları çiz
+
+            requestAnimationFrame(animate);
+        }
+
+        satelliteImage.onload = () => {
+            animate();  // Uydu resmi yüklendikten sonra animasyonu başlat
+        };
+
+        // Olay dinleyicileri
+        document.getElementById('wavelength').addEventListener('input', (event) => {
+            wavelength = event.target.value; // Dalga boyu değerini al
+            document.getElementById('wavelengthValue').innerText = wavelength;
+        });
+
+        document.getElementById('amplitude').addEventListener('input', (event) => {
+            amplitude = event.target.value; // Genlik değerini al (minimum 10)
+            document.getElementById('amplitudeValue').innerText = amplitude;
+        });
+
+    </script>
+
+</body>
+
+</html>

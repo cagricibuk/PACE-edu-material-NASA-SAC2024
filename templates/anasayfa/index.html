@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>PACE Sat</title>
+    <!-- CSS dosyasını Flask statik dizininden yüklüyoruz -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <!-- JavaScript dosyasını Flask statik dizininden yüklüyoruz -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <style>
+        /* Header container ve butonları hizalama */
+        .header {
+            display: flex;
+            justify-content: flex-start;
+            /* Butonları sola hizalar */
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Resimli buton stil ayarları */
+        .image-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            /* Fare imlecini değiştirir */
+            margin-right: 20px;
+        }
+
+        /* Butonun üzerine gelindiğinde imleci değiştir */
+        .image-button:hover {
+            cursor: pointer;
+        }
+
+        /* Resim boyutlandırma */
+        .image-button img {
+            width: 50px;
+            height: 50px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container image-container">
+        <!-- Ana arka plan resmi -->
+        <img src="{{ url_for('static', filename='images/ana2.jpg') }}" alt="Main Image" class="background-image">
+
+        <div class="header">
+            <!-- Resimli butonlar -->
+            <button class="image-button" onclick="openModal('yellow')">
+                <img src="{{ url_for('static', filename='images/yellow.png') }}" alt="Resim 1">
+            </button>
+
+            <!-- Anasayfaya dönüş butonu -->
+            <a href="{{ url_for('ikinci_sayfa') }}">
+                <button class="image-button">
+                    <img src="{{ url_for('static', filename='images/44386.png') }}" alt="Resim 2">
+                </button>
+            </a>
+
+            <!-- Diğer buton -->
+            <button class="button" onclick="openModal('pace_sat')">
+
+            </button>
+        </div>
+
+        <div class="main">
+            <!-- Ekosistem butonu -->
+            <button class="button" onclick="openModal('ekosist')">
+                <img src="{{ url_for('static', filename='images/ekosistem.png') }}" style="width: 20%; height: 50%;">
+            </button>
+            <!-- Diğer butonlar -->
+            <button class="button" onclick="openModal('bulut_aerosol')"></button>
+        </div>
+
+        <div class="middle">
+            <!-- Besin zinciri butonu -->
+            <button class="button" onclick="openModal('besin_zinciri')"></button>
+            <!-- Plankton butonu -->
+            <button class="button" onclick="openModal('plankton')"></button>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modal-title"></h2>
+            <p id="modal-description"></p>
+            <!-- Modal içinde görsel -->
+            <img id="modal-image" src="" alt="" style="width: 100%; height: auto; margin-top: 20px;">
+            <img id="modal-image2" src="" alt="" style="width: 100%; height: auto; margin-top: 20px;">
+            <!-- Modal içinde iframe -->
+            <iframe id="modal-iframe" src="" style="width: 100%; height: 500px; border: none; display: none;"></iframe>
+        </div>
+    </div>
+
+    <script>
+        // Modal açma fonksiyonu
+        function openModal(modalType) {
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalDescription = document.getElementById('modal-description');
+            const modalImage = document.getElementById('modal-image');
+            const modalIframe = document.getElementById('modal-iframe'); // Modal'daki iframe etiketi
+
+            modalImage.style.display = 'block';
+            modalIframe.style.display = 'none'; // İfrem'i varsayılan olarak gizle
+
+            switch (modalType) {
+                case 'pace_sat':
+                    modalIframe.src = "{{ url_for('t3_sat') }}"; // PACE Satellite iframe
+                    modalIframe.style.width = '100%';
+                    modalIframe.style.height = "300px";
+                    modalIframe.style.display = 'block'; // iframe'i göster
+                    modalImage.src = "{{ url_for('static', filename='images/pace-info.jpg') }}"; // Görsel yolunu ayarla
+                    modalImage.alt = 'PACE Satellite Image'; // Görsel alt metnini ayarla
+                    modalImage.style.display = 'block'; // Görseli göster
+                    break;
+
+                case 'bulut_aerosol':
+                    modalImage.src = "{{ url_for('static', filename='images/aerosol.jpg') }}";
+                    modalImage.alt = 'Bulut ve Aerosol Image';
+                    break;
+                case 'yellow':
+                    modalImage.src = "{{ url_for('static', filename='images/yellow.jpg') }}";
+                    modalImage.alt = 'Yellow Image';
+                    break;
+                case 'ekosist':
+                    modalImage.src = "{{ url_for('static', filename='images/ekosistem.jpg') }}";
+                    modalImage.alt = 'Ekosistem Image';
+                    break;
+                case 'besin_zinciri':
+                    modalImage.src = "{{ url_for('static', filename='images/piramit.jpg') }}";
+                    modalImage.alt = 'Besin Zinciri Image';
+                    break;
+                case 'plankton':
+                    // İlk resmi ekle
+                    modalImage.src = "{{ url_for('static', filename='images/son2.jpg') }}";
+                    modalImage.alt = 'Plankton Image';
+                    break;
+                default:
+                    modalImage.src = '';
+                    modalImage.alt = '';
+            }
+
+            // Modali gösterme
+            modal.style.display = 'block';
+        }
+
+        // Modal kapatma fonksiyonu
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.style.display = 'none';
+        }
+
+        // Sayfa yüklendiğinde modalın kapanmasını sağla
+        window.onclick = function (event) {
+            const modal = document.getElementById('modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+
+</html>

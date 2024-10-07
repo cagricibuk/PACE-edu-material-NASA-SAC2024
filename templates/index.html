@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harita Projesi</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #map-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            cursor: grab;
+            transform-origin: middle;
+            transition: transform 0.1s;
+        }
+        #mask {
+            position: absolute;
+            border-radius: 50%;
+            width: 50%;
+            height: 95%;
+            box-shadow: 0 0 0 9999px rgb(19, 19, 19);
+            pointer-events: none;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        /* Folder ve Zoom Butonları için stil */
+        .button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        /* Slider */
+        #mapSlider {
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map-container">
+        <div id="map"></div>
+        <div id="mask"></div>
+    </div>
+
+    <!-- Folder Düğmeleri -->
+    <div style="position: absolute; top: 10px; left: 10px;">
+        <button class="button" onclick="loadMaps('chloro')">Chlorophyll concentration</button>
+        <button class="button" onclick="loadMaps('organicCarb')">Particulate Organic Carbon</button>
+        <button class="button" onclick="loadMaps('planktonCarb')">Phytoplankton Carbon</button>
+    </div>
+
+    <!-- Yakınlaştırma ve Uzaklaştırma Düğmeleri -->
+    <div style="position: absolute; top: 10px; right: 10px;">
+        <button class="button" onclick="zoomIn()">+</button>
+        <button class="button" onclick="zoomOut()">-</button>
+    </div>
+
+    <!-- Slider -->
+    <div style="position: absolute; bottom: 10px; left: 10px;">
+        <input type="range" id="mapSlider" min="0" max="0" value="0" step="1" oninput="changeMap()">
+    </div>
+
+    <script>
+        let maps = [];
+        let currentMapIndex = 0;
+        let translateX = 0, translateY = 0;
+        let scale = 3.1;
+        const minScale = 3, maxScale = 5;
+        let isDragging = false;
+        let lastMouseX, lastMouseY;
+
+        const offsetX = 100;
+        const offsetY = 100;
+
+        function loadMaps(folder) {
+            fetch(`/get_maps/${folder}`)
+                .then(response => response.json())
+                .then(data => {
+                    maps = data;
+                    currentMapIndex = 0;
+                    document.getElementById('mapSlider').max = maps.length - 1;
+                    changeMap();
+                });
+        }
+
+        function changeMap() {
+            const slider = document.getElementById('mapSlider');
+            currentMapIndex = slider.value;
+            const mapUrl = `../static/images/${maps[currentMapIndex]}`;
+            document.getElementById('map').style.backgroundImage = `url(${mapUrl})`;
+        }
+
+        // Yakınlaştırma ve uzaklaştırma işlemleri için fonksiyonlar
+        function zoomIn() {
+            scale = Math.min(scale + 0.1, maxScale);
+            checkBoundaries();
+        }
+
+        function zoomOut() {
+            scale = Math.max(scale - 0.1, minScale);
+            checkBoundaries();
+        }
+
+        // Hareket etme sınırlarını kontrol et
+        function checkBoundaries() {
+            const mapContainer = document.getElementById('map-container');
+            const map = document.getElementById('map');
+
+            const containerWidth = mapContainer.clientWidth;
+            const containerHeight = mapContainer.clientHeight;
+
+            const mapWidth = map.offsetWidth * scale;
+            const mapHeight = map.offsetHeight * scale;
+
+            const maxTranslateX = (mapWidth - containerWidth) / 2 + offsetX;
+            const maxTranslateY = (mapHeight - containerHeight) / 2 + offsetY;
+
+            if (translateX > maxTranslateX) translateX = maxTranslateX;
+            if (translateX < -maxTranslateX) translateX = -maxTranslateX;
+            if (translateY > maxTranslateY) translateY = maxTranslateY;
+            if (translateY < -maxTranslateY) translateY = -maxTranslateY;
+
+            map.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        }
+
+        map.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                isDragging = true;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                map.style.cursor = 'grabbing';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            map.style.cursor = 'grab';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = (e.clientX - lastMouseX) * scale;
+                const deltaY = (e.clientY - lastMouseY) * scale;
+                translateX += deltaX;
+                translateY += deltaY;
+                checkBoundaries();
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            }
+        });
+    </script>
+</body>
+</html>
